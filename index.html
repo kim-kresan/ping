@@ -763,7 +763,6 @@ function saveSettings() {
     maxGap: document.getElementById('maxGap').value,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  localStorage.setItem(URL_KEY, document.getElementById('scriptUrl').value);
 }
 
 function loadSettings() {
@@ -1106,7 +1105,9 @@ async function logToSheet(entry) {
 // SHEET CONNECT / DISCONNECT
 // ─────────────────────────────────────────────
 function connectSheet() {
-  const url = document.getElementById('scriptUrl').value.trim();
+  const urlEl = document.getElementById('scriptUrl');
+  const url = urlEl ? urlEl.value.trim() : '';
+  console.log('connectSheet called, url:', url);
   if (!url || !url.startsWith('https://')) {
     showToast('Please enter a valid https:// URL', 'error');
     return;
