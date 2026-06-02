@@ -550,6 +550,52 @@
       flex-shrink: 0;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Alone toggle ── */
+    .alone-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 14px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+    }
+    .alone-row.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+    .alone-label {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      flex: 1;
+    }
+    .toggle-group {
+      display: flex;
+      gap: 6px;
+    }
+    .toggle-btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+    .toggle-btn.selected {
+      background: var(--surface2);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -661,6 +707,13 @@
     <div class="ping-prompt" id="pingPrompt">What is happening right now?</div>
     <div class="ping-subprompt">Describe your experience of consciousness in this moment — thoughts, sensations, surroundings, mood.</div>
     <textarea id="pingResponse" placeholder="I notice…" autofocus></textarea>
+    <div class="alone-row" id="aloneRow">
+      <span class="alone-label">Were you alone?</span>
+      <div class="toggle-group">
+        <button class="toggle-btn" id="aloneYes" onclick="setAlone('yes')">Yes</button>
+        <button class="toggle-btn" id="aloneNo"  onclick="setAlone('no')">No</button>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="skipPing()">Skip</button>
       <button class="btn btn-primary" onclick="submitPing()">Log Entry</button>
@@ -680,6 +733,8 @@ let timers = [];         // setTimeout handles
 let sessionActive = false;
 let countdownInterval = null;
 let currentPingIndex = null;
+let pingFiredAt = null;  // timestamp when ping was triggered
+let aloneValue = null;   // 'yes' | 'no' | null
 const sessionLogs = [];
 
 let audioCtx = null;
@@ -830,10 +885,15 @@ const PROMPTS = [
 
 function triggerPing(index) {
   currentPingIndex = index;
+  pingFiredAt = Date.now();
+  aloneValue = null;
   const now = new Date();
   document.getElementById('pingMoment').textContent = `●  ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
   document.getElementById('pingPrompt').textContent = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
   document.getElementById('pingResponse').value = '';
+  document.getElementById('aloneRow').classList.remove('visible');
+  document.getElementById('aloneYes').classList.remove('selected');
+  document.getElementById('aloneNo').classList.remove('selected');
   document.getElementById('pingModal').classList.add('visible');
   document.getElementById('pingResponse').focus();
 
@@ -869,6 +929,8 @@ function submitPing() {
     timestamp: new Date().toISOString(),
     response: text,
     session: sessionActive ? 'active' : 'manual',
+    latencySeconds: pingFiredAt ? Math.round((Date.now() - pingFiredAt) / 1000) : null,
+    alone: aloneValue,
     syncState: 'syncing',
   };
 
@@ -883,7 +945,17 @@ function submitPing() {
   showToast('Entry logged ✓', 'success');
 }
 
-function skipPing() {
+function setAlone(val) {
+  aloneValue = val;
+  document.getElementById('aloneYes').classList.toggle('selected', val === 'yes');
+  document.getElementById('aloneNo').classList.toggle('selected', val === 'no');
+}
+
+// Reveal alone question once user starts typing
+document.getElementById('pingResponse').addEventListener('input', function() {
+  const row = document.getElementById('aloneRow');
+  if (this.value.trim().length > 0) row.classList.add('visible');
+});
   document.getElementById('pingModal').classList.remove('visible');
   currentPingIndex = null;
   renderSchedule();
@@ -978,9 +1050,20 @@ function renderLog() {
       else if (e.syncState === 'ok')   syncEl = `<div class="sync-ok" title="Saved to sheet"></div>`;
       else if (e.syncState === 'err')  syncEl = `<div class="sync-err" title="Sync failed"></div>`;
     }
+    let meta = [];
+    if (e.latencySeconds !== null && e.latencySeconds !== undefined) {
+      const m = Math.floor(e.latencySeconds / 60);
+      const s = e.latencySeconds % 60;
+      meta.push(m > 0 ? `${m}m ${s}s to respond` : `${s}s to respond`);
+    }
+    if (e.alone === 'yes') meta.push('alone');
+    if (e.alone === 'no')  meta.push('not alone');
+    const metaStr = meta.length ? `<span style="color:var(--muted);font-size:11px;margin-left:auto">${meta.join(' · ')}</span>` : '';
+
     return `<div class="log-entry" id="entry-${e.id}">
       <div class="log-entry-header">
         <span class="log-entry-time">${t}</span>
+        ${metaStr}
         ${syncEl}
       </div>
       <div class="log-entry-text">${escapeHtml(e.response)}</div>
@@ -1003,7 +1086,13 @@ async function logToSheet(entry) {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ timestamp: entry.timestamp, response: entry.response, session: entry.session }),
+    body: JSON.stringify({
+        timestamp: entry.timestamp,
+        response: entry.response,
+        session: entry.session,
+        latencySeconds: entry.latencySeconds,
+        alone: entry.alone,
+      }),
     });
     entry.syncState = 'ok';
   } catch(e) {
