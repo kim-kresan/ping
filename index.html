@@ -955,6 +955,8 @@ document.getElementById('pingResponse').addEventListener('input', function() {
   const row = document.getElementById('aloneRow');
   if (this.value.trim().length > 0) row.classList.add('visible');
 });
+
+function skipPing() {
   document.getElementById('pingModal').classList.remove('visible');
   currentPingIndex = null;
   renderSchedule();
