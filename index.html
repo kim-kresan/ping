@@ -1107,8 +1107,8 @@ async function logToSheet(entry) {
 // ─────────────────────────────────────────────
 function connectSheet() {
   const url = document.getElementById('scriptUrl').value.trim();
-  if (!url || !url.startsWith('https://script.google.com')) {
-    showToast('Please enter a valid Apps Script URL', 'error');
+  if (!url || !url.startsWith('https://')) {
+    showToast('Please enter a valid https:// URL', 'error');
     return;
   }
   localStorage.setItem(URL_KEY, url);
