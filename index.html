@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What is it — Consciousness Sampler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0e0e0f;
+      --surface: #18181b;
+      --surface2: #222228;
+      --border: #2e2e38;
+      --text: #e8e6df;
+      --muted: #7a7a8a;
+      --accent: #c8b89a;
+      --ping: #e8c97a;
+      --danger: #e07a5f;
+      --success: #6bbf94;
+      --font-display: 'DM Serif Display', Georgia, serif;
+      --font-mono: 'DM Mono', 'Courier New', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Subtle noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 560px;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      margin-bottom: 48px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 36px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--ping);
+    }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--ping);
+      border-radius: 50%;
+    }
+
+    /* ── Form Controls ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input[type="time"],
+    input[type="number"] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      padding: 10px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input[type="time"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .status-indicator.active {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-indicator.pinging {
+      background: var(--ping);
+      box-shadow: 0 0 12px var(--ping);
+      animation: pulse-fast 0.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .status-text { color: var(--text); }
+    .status-sub { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 12px 24px;
+      border-radius: 2px;
+      border: 1px solid;
+      cursor: pointer;
+      transition: all 0.15s;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: var(--ping); border-color: var(--ping); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger); color: var(--bg); }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Schedule Preview ── */
+    .schedule-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .schedule-list::-webkit-scrollbar { width: 4px; }
+    .schedule-list::-webkit-scrollbar-track { background: var(--surface2); }
+    .schedule-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .schedule-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-radius: 2px;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .schedule-item.done { opacity: 0.35; }
+    .schedule-item.next { border-left: 2px solid var(--ping); background: #1f1e14; }
+    .schedule-item.upcoming { border-left: 2px solid transparent; }
+
+    .ping-time { color: var(--ping); font-size: 15px; }
+    .ping-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .countdown {
+      margin-left: auto;
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    /* ── Ping Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 36px;
+      width: 100%;
+      max-width: 480px;
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.visible .modal {
+      transform: translateY(0);
+    }
+
+    .ping-moment {
+      font-family: var(--font-display);
+      font-size: 13px;
+      color: var(--ping);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .ping-prompt {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-style: italic;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    .ping-subprompt {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 24px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      padding: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    textarea::placeholder { color: var(--muted); font-style: italic; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      justify-content: flex-end;
+    }
+
+    /* ── Settings Link ── */
+    .setup-note {
+      background: #1a1710;
+      border: 1px solid #3a3420;
+      border-radius: 2px;
+      padding: 16px 20px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .setup-note a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .setup-note a:hover { text-decoration: underline; }
+
+    .setup-note code {
+      background: var(--surface2);
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-size: 11px;
+      color: var(--ping);
+    }
+
+    /* ── Log History ── */
+    .log-empty {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 24px;
+      font-style: italic;
+    }
+
+    .log-entry {
+      padding: 14px;
+      background: var(--surface2);
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+
+    .log-entry-time {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .log-entry-text {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 2px;
+      font-size: 13px;
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    .text-muted { color: var(--muted); }
+
+    /* ── Ping ring animation on arrival ── */
+    @keyframes ring-expand {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="logo">Ping <span>&#10061</span></div>
+      <div class="tagline">Consciousness Sampler</div>
+    </div>
+  </header>
+
+  <!-- Status Bar -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-indicator" id="statusDot"></div>
+    <span class="status-text" id="statusText">Not running</span>
+    <span class="status-sub" id="statusSub"></span>
+  </div>
+
+  <!-- Session Controls -->
+  <div class="card">
+    <div class="card-title"><span class="dot"></span> Session</div>
+    <div class="btn-row" id="sessionButtons">
+      <button class="btn btn-primary" onclick="startSession()">Start Today's Session</button>
+    </div>
+  </div>
+
+  <!-- Schedule Preview -->
+  <div class="card" id="scheduleCard" style="display:none">
+    <div class="card-title"><span class="dot"></span> Today's Pings</div>
+    <ul class="schedule-list" id="scheduleList"></ul>
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <div class="card-title"><span class="dot"></span> Constraints</div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="field">
+        <label>Window Start</label>
+        <input type="time" id="startTime" value="09:00" />
+      </div>
+      <div class="field">
+        <label>Window End</label>
+        <input type="time" id="endTime" value="21:00" />
+      </div>
+    </div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="field">
+        <label>Min Pings / Day</label>
+        <input type="number" id="minEvents" min="1" max="50" value="5" />
+      </div>
+      <div class="field">
+        <label>Max Pings / Day</label>
+        <input type="number" id="maxEvents" min="1" max="50" value="10" />
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Min Gap (min)</label>
+        <input type="number" id="minGap" min="1" max="480" value="20" />
+      </div>
+      <div class="field">
+        <label>Max Gap (min)</label>
+        <input type="number" id="maxGap" min="1" max="480" value="90" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Sheet Setup -->
+  <div class="card">
+    <div class="card-title"><span class="dot"></span> Data Logging</div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Google Apps Script URL</label>
+      <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/..." 
+             style="background:var(--surface2);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:var(--font-mono);font-size:13px;padding:10px 12px;width:100%;outline:none;" />
+    </div>
+    <div class="setup-note">
+      <strong style="color:var(--accent)">Setup (one-time):</strong><br/>
+      1. Open <a href="https://sheets.google.com" target="_blank">Google Sheets</a> → create a new sheet named <code>Pings</code><br/>
+      2. Extensions → Apps Script → paste the script from <code>appsscript.js</code><br/>
+      3. Deploy → New deployment → Web app → Anyone → Copy the URL above<br/>
+      4. The sheet auto-creates columns: Timestamp · Response · Session · Notes
+    </div>
+  </div>
+
+  <!-- Session History (local) -->
+  <div class="card" id="logCard">
+    <div class="card-title"><span class="dot"></span> This Session</div>
+    <div id="logList"><div class="log-empty">No entries yet — start a session to begin</div></div>
+  </div>
+
+</div><!-- .app -->
+
+<!-- Ping Modal -->
+<div class="modal-overlay" id="pingModal">
+  <div class="modal">
+    <div class="ping-moment" id="pingMoment">●  Ping</div>
+    <div class="ping-prompt" id="pingPrompt">What is happening right now?</div>
+    <div class="ping-subprompt">Describe your experience of consciousness in this moment — thoughts, sensations, surroundings, mood.</div>
+    <textarea id="pingResponse" placeholder="I notice…" autofocus></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="skipPing()">Skip</button>
+      <button class="btn btn-primary" onclick="submitPing()">Log Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let pings = [];          // array of Date objects for today
+let timers = [];         // setTimeout handles
+let sessionActive = false;
+let countdownInterval = null;
+let currentPingIndex = null;
+const sessionLogs = [];
+
+const STORAGE_KEY = 'ping_settings';
+const URL_KEY = 'ping_script_url';
+
+// ─────────────────────────────────────────────
+// PERSISTENCE
+// ─────────────────────────────────────────────
+function saveSettings() {
+  const s = {
+    startTime: document.getElementById('startTime').value,
+    endTime: document.getElementById('endTime').value,
+    minEvents: document.getElementById('minEvents').value,
+    maxEvents: document.getElementById('maxEvents').value,
+    minGap: document.getElementById('minGap').value,
+    maxGap: document.getElementById('maxGap').value,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  localStorage.setItem(URL_KEY, document.getElementById('scriptUrl').value);
+}
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (s.startTime) document.getElementById('startTime').value = s.startTime;
+    if (s.endTime) document.getElementById('endTime').value = s.endTime;
+    if (s.minEvents) document.getElementById('minEvents').value = s.minEvents;
+    if (s.maxEvents) document.getElementById('maxEvents').value = s.maxEvents;
+    if (s.minGap) document.getElementById('minGap').value = s.minGap;
+    if (s.maxGap) document.getElementById('maxGap').value = s.maxGap;
+  } catch(e) {}
+  const url = localStorage.getItem(URL_KEY);
+  if (url) document.getElementById('scriptUrl').value = url;
+}
+
+// Auto-save settings on change
+document.querySelectorAll('input').forEach(el => el.addEventListener('change', saveSettings));
+
+// ─────────────────────────────────────────────
+// SCHEDULER
+// ─────────────────────────────────────────────
+function todayAt(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function randInt(a, b) {
+  return Math.floor(Math.random() * (b - a + 1)) + a;
+}
+
+function generatePings() {
+  const startT = todayAt(document.getElementById('startTime').value);
+  const endT   = todayAt(document.getElementById('endTime').value);
+  const minN   = parseInt(document.getElementById('minEvents').value);
+  const maxN   = parseInt(document.getElementById('maxEvents').value);
+  const minG   = parseInt(document.getElementById('minGap').value) * 60000;
+  const maxG   = parseInt(document.getElementById('maxGap').value) * 60000;
+  const now    = new Date();
+
+  if (endT <= startT) { showToast('End time must be after start time', 'error'); return null; }
+  if (minN > maxN)    { showToast('Min pings must be ≤ max pings', 'error'); return null; }
+  if (minG > maxG)    { showToast('Min gap must be ≤ max gap', 'error'); return null; }
+
+  const count = randInt(minN, maxN);
+  const result = [];
+  let cursor = Math.max(startT.getTime(), now.getTime() + 60000); // at least 1 min from now
+
+  for (let i = 0; i < count; i++) {
+    const gap = randInt(minG, maxG);
+    cursor += gap;
+    if (cursor >= endT.getTime()) break;
+    result.push(new Date(cursor));
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────
+// SESSION
+// ─────────────────────────────────────────────
+function startSession() {
+  saveSettings();
+  const generated = generatePings();
+  if (!generated || generated.length === 0) {
+    showToast('No pings could be scheduled in the remaining window', 'error');
+    return;
+  }
+
+  // Clear any existing timers
+  stopSession(false);
+
+  pings = generated;
+  sessionActive = true;
+
+  pings.forEach((pingTime, i) => {
+    const delay = pingTime.getTime() - Date.now();
+    if (delay > 0) {
+      timers.push(setTimeout(() => triggerPing(i), delay));
+    }
+  });
+
+  renderSchedule();
+  updateStatus();
+  document.getElementById('scheduleCard').style.display = '';
+  document.getElementById('sessionButtons').innerHTML = `
+    <button class="btn btn-ghost" onclick="stopSession(true)">Stop Session</button>
+  `;
+
+  showToast(`Session started — ${pings.length} ping${pings.length !== 1 ? 's' : ''} scheduled`, 'success');
+  startCountdownTick();
+}
+
+function stopSession(announce = true) {
+  timers.forEach(clearTimeout);
+  timers = [];
+  if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+  sessionActive = false;
+  pings = [];
+
+  document.getElementById('sessionButtons').innerHTML = `
+    <button class="btn btn-primary" onclick="startSession()">Start Today's Session</button>
+  `;
+  document.getElementById('scheduleCard').style.display = 'none';
+  document.getElementById('statusDot').className = 'status-indicator';
+  document.getElementById('statusText').textContent = 'Not running';
+  document.getElementById('statusSub').textContent = '';
+
+  if (announce) showToast('Session stopped');
+}
+
+// ─────────────────────────────────────────────
+// PING
+// ─────────────────────────────────────────────
+const PROMPTS = [
+  'What is happening right now?',
+  'Where is your attention in this moment?',
+  'What are you aware of right now?',
+  'Describe this moment of experience.',
+  'What does right now feel like?',
+  'Notice what is present — what do you find?',
+  'What is the texture of this moment?',
+];
+
+function triggerPing(index) {
+  currentPingIndex = index;
+  const now = new Date();
+  document.getElementById('pingMoment').textContent = `●  ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+  document.getElementById('pingPrompt').textContent = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+  document.getElementById('pingResponse').value = '';
+  document.getElementById('pingModal').classList.add('visible');
+  document.getElementById('pingResponse').focus();
+
+  // Sound: gentle beep via Web Audio
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(660, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc.start(); osc.stop(ctx.currentTime + 0.8);
+  } catch(e) {}
+
+  renderSchedule();
+  updateStatus();
+}
+
+function submitPing() {
+  const text = document.getElementById('pingResponse').value.trim();
+  if (!text) { document.getElementById('pingResponse').focus(); return; }
+
+  const entry = {
+    timestamp: new Date().toISOString(),
+    response: text,
+    session: sessionActive ? 'active' : 'manual',
+  };
+
+  sessionLogs.push(entry);
+  renderLog();
+  logToSheet(entry);
+
+  document.getElementById('pingModal').classList.remove('visible');
+  currentPingIndex = null;
+  renderSchedule();
+  updateStatus();
+  showToast('Entry logged ✓', 'success');
+}
+
+function skipPing() {
+  document.getElementById('pingModal').classList.remove('visible');
+  currentPingIndex = null;
+  renderSchedule();
+  showToast('Ping skipped');
+}
+
+// Close modal on overlay click
+document.getElementById('pingModal').addEventListener('click', function(e) {
+  if (e.target === this) skipPing();
+});
+
+// Keyboard shortcut: Cmd/Ctrl+Enter to submit
+document.getElementById('pingResponse').addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitPing();
+});
+
+// ─────────────────────────────────────────────
+// UI RENDERING
+// ─────────────────────────────────────────────
+function renderSchedule() {
+  const list = document.getElementById('scheduleList');
+  if (!pings.length) { list.innerHTML = ''; return; }
+
+  const now = new Date();
+  list.innerHTML = pings.map((p, i) => {
+    const timeStr = p.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const isPast  = p < now && i !== currentPingIndex;
+    const isCurrent = i === currentPingIndex;
+    const isNext = !isPast && !isCurrent && pings.slice(0, i).every(pp => pp < now);
+
+    let cls = isPast ? 'done' : isNext ? 'next' : 'upcoming';
+    let label = isPast ? '✓ done' : isCurrent ? '● now' : `ping ${i+1}`;
+
+    return `<li class="schedule-item ${cls}">
+      <span class="ping-time">${timeStr}</span>
+      <span class="ping-label">${label}</span>
+      ${isNext ? `<span class="countdown" id="cdTimer">—</span>` : ''}
+    </li>`;
+  }).join('');
+}
+
+function startCountdownTick() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    const el = document.getElementById('cdTimer');
+    if (!el) return;
+    const now = Date.now();
+    const next = pings.find(p => p.getTime() > now);
+    if (!next) { el.textContent = '—'; return; }
+    const diff = Math.max(0, next.getTime() - now);
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    updateStatus();
+  }, 1000);
+}
+
+function updateStatus() {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const sub  = document.getElementById('statusSub');
+
+  if (currentPingIndex !== null) {
+    dot.className = 'status-indicator pinging';
+    text.textContent = 'Ping!';
+    sub.textContent = 'Waiting for your response…';
+    return;
+  }
+  if (!sessionActive) {
+    dot.className = 'status-indicator';
+    text.textContent = 'Not running';
+    sub.textContent = '';
+    return;
+  }
+  const now = Date.now();
+  const remaining = pings.filter(p => p.getTime() > now);
+  dot.className = 'status-indicator active';
+  text.textContent = 'Session active';
+  sub.textContent = `${remaining.length} ping${remaining.length !== 1 ? 's' : ''} remaining`;
+}
+
+function renderLog() {
+  const el = document.getElementById('logList');
+  if (!sessionLogs.length) {
+    el.innerHTML = '<div class="log-empty">No entries yet — start a session to begin</div>';
+    return;
+  }
+  el.innerHTML = [...sessionLogs].reverse().map(e => {
+    const d = new Date(e.timestamp);
+    const t = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    return `<div class="log-entry">
+      <div class="log-entry-time">${t}</div>
+      <div class="log-entry-text">${escapeHtml(e.response)}</div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────
+// GOOGLE SHEETS LOGGING
+// ─────────────────────────────────────────────
+async function logToSheet(entry) {
+  const url = document.getElementById('scriptUrl').value.trim();
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  } catch(e) {
+    console.warn('Sheet logging failed:', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+loadSettings();
+renderLog();
+</script>
+</body>
+</html>
